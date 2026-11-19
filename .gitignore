@@ -1,0 +1,51 @@
+# Operating System Files
+/includes/mail_config.local.php
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# Editor Directories & Files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Environment & Credentials
+.env
+config/local.php
+
+# Dynamic User Uploads (keep gitkeep files)
+assets/uploads/avatars/*
+!assets/uploads/avatars/.gitkeep
+assets/uploads/portfolios/*
+!assets/uploads/portfolios/.gitkeep
+
+# Logs & Temporary Files
+*.log
+tmp/
+
+
+# Database backups
+
+# Temporary testing files
+/test_mail.php
+
+# Operating system files
+desktop.ini
+
+
+# Database backup files
+/database/backup_*.sql
+
+# Private uploaded identity documents
+/storage/documents/*
+!/storage/documents/.htaccess
+
+# Test session cookies
+/tests/*cookies*.txt
+
+# Temporary test files
+/test_mail.php
+
