@@ -1,216 +1,352 @@
 # KaamConnect - Local Worker Hiring and Employment Marketplace
 
-> **B.Tech Computer Science and Engineering — Final-Year Major Project**  
-> Developed using PHP 8+ (PDO), MySQL/MariaDB, Vanilla JavaScript, HTML5, CSS3, Bootstrap 5.3, and Font Awesome.
+**B.Tech Computer Science and Engineering | Final-Year Major Project**
+
+KaamConnect is a location-based employment and worker hiring marketplace that connects skilled local workers with residential and commercial customers.
+
+The platform helps customers find and hire local professionals such as electricians, plumbers, carpenters, painters, masons, cleaners and mechanics. Workers can create professional profiles, discover job opportunities and connect directly with customers.
 
 ---
 
-## 1. Project Overview
+## 1. Project Objectives
 
-**KaamConnect** is a localized employment and worker hiring marketplace that directly bridges skilled and unorganized blue-collar artisans (electricians, plumbers, carpenters, painters, masons, cleaners, mechanics, etc.) with residential and commercial customers within their neighbourhood.
-
-### Key Objectives
-- Eliminate middleman commission exploitation by providing direct customer-worker connections.
-- Empower local workers with professional, shareable digital portfolios and verified credential badges.
-- Enable customers to post localized tasks with budgets, compare bids, hire verified talent, and rate work transparently.
-- Real-time in-app private messaging with AJAX polling for direct negotiations.
-- Full bilingual English and Hindi localization with instant language switching.
+- Connect local workers directly with customers.
+- Reduce dependency on middlemen and commission-based services.
+- Help workers build professional digital profiles.
+- Allow customers to post jobs and find suitable workers.
+- Support communication between customers and workers.
+- Provide identity verification and administrative management.
+- Support both English and Hindi languages.
 
 ---
 
 ## 2. Technology Stack
 
-- **Frontend**: HTML5, CSS3, JavaScript (ES6+ Vanilla), Bootstrap 5.3.3, Font Awesome 6.5.2
-- **Backend**: PHP 8.0+ with PHP Data Objects (PDO), Strict Typing
-- **Database**: MySQL 8.0 / MariaDB 10.3+ (Engine: InnoDB, Collation: `utf8mb4_unicode_ci`)
-- **Web Server**: Apache (XAMPP for Windows 10/11)
-- **Architecture**: Modular Multi-Tier MVC-patterned Monolith with RESTful AJAX Endpoints
+| Component | Technology |
+|---|---|
+| Frontend | HTML5, CSS3, JavaScript |
+| UI Framework | Bootstrap 5.3 |
+| Icons | Font Awesome |
+| Backend | PHP 8+ |
+| Database | MySQL / MariaDB |
+| Database Connectivity | PDO |
+| Web Server | Apache |
+| Local Development | XAMPP |
+| Code Editor | Visual Studio Code |
+| Version Control | Git and GitHub |
 
-### Strict Stack Constraints Adhered To
-- No Node.js backend.
-- No React or heavy frontend framework.
-- No Laravel or third-party framework overhead.
-- Native PDO with 100% prepared statement parameter binding.
+### Technical Highlights
 
----
-
-## 3. UI/UX Design System
-
-The application features a clean, high-contrast, modern blue-and-white visual identity:
-- **Primary Blue**: `#1E40AF`
-- **Secondary Blue**: `#2563EB`
-- **Accent Orange**: `#F59E0B`
-- **Background**: `#F8FAFC`
-- **Surface White**: `#FFFFFF`
-- **Primary Text**: `#1E293B`
-- **Muted Text**: `#64748B`
+- PHP-based backend architecture.
+- PDO-based database connectivity.
+- Prepared SQL statements.
+- Role-based access for different user types.
+- Responsive user interface.
+- AJAX-based functionality where implemented.
 
 ---
 
-## 4. User Roles & Capabilities
+## 3. Main Features
 
-### A. Worker
-1. Register, log in, manage professional profile and trade categories.
-2. Upload profile photo and portfolio pictures of previous client projects.
-3. Set hourly or daily wage expectations, availability status, and service locality.
-4. Search customer jobs with live category, city, locality, and budget filters.
-5. Submit job applications with custom wage proposals and cover notes.
-6. Track application lifecycle (Pending, Accepted, Rejected, Withdrawn).
-7. One-to-one private chat with customers.
-8. Receive genuine star ratings (1–5) and customer reviews upon job completion.
+### Worker Module
 
-### B. Customer
-1. Register, log in, manage customer profile and home address.
-2. Post jobs specifying category, required skills, budget, locality, and preferred date.
-3. Search and filter verified workers by trade, rating, experience, and locality.
-4. Review received bids, inspect worker portfolios, accept/reject proposals.
-5. Hire worker (automatically closes new bids and transitions job to `assigned`).
-6. Private in-app messaging with hired/bidding workers.
-7. Mark jobs completed and submit verified ratings and written feedback.
+- Worker registration and login.
+- Manage professional information and profile.
+- Select trade categories and skills.
+- Add service location and wage expectations.
+- Browse available customer job postings.
+- Submit job applications.
+- Track application status.
+- Communicate with customers.
+- Receive notifications.
 
-### C. Administrator
-1. Secure role-protected control center (`/admin/`).
-2. Live platform statistics: total users, active workers, customer accounts, and jobs.
-3. Review worker verification requests and toggle Aadhaar/skill verification status.
-4. User management: suspend or activate accounts.
-5. Category management: add, edit, or toggle trade specialties.
-6. Moderation: inspect user complaints, dispute reports, and job listings.
+### Customer Module
+
+- Customer registration and login.
+- Manage customer profile.
+- Post new job requirements.
+- Specify job category, budget and location.
+- Browse and search available workers.
+- View worker profiles.
+- Review job applications.
+- Hire suitable workers.
+- Communicate with workers.
+- Receive notifications.
+
+### Administrator Module
+
+- Admin authentication and dashboard.
+- Monitor platform activity.
+- Manage customer and worker accounts.
+- Review worker verification requests.
+- Manage job categories.
+- Monitor job postings.
+- Manage platform-related reports and activities.
 
 ---
 
-## 5. Local Setup & Installation (XAMPP on Windows)
+## 4. User Roles
+
+KaamConnect supports three primary user roles:
+
+| Role | Responsibility |
+|---|---|
+| Worker | Find jobs and connect with customers |
+| Customer | Post jobs and hire workers |
+| Administrator | Manage and monitor the platform |
+
+---
+
+## 5. UI/UX Design
+
+The application uses a modern blue-and-white visual theme.
+
+| Design Element | Color |
+|---|---|
+| Primary Blue | `#1E40AF` |
+| Secondary Blue | `#2563EB` |
+| Accent Orange | `#F59E0B` |
+| Background | `#F8FAFC` |
+| Surface | `#FFFFFF` |
+| Primary Text | `#1E293B` |
+| Muted Text | `#64748B` |
+
+The interface is designed to be responsive and accessible across different screen sizes.
+
+---
+
+## 6. Local Installation and Setup
 
 ### Prerequisites
-- Windows 10 or 11
-- [XAMPP](https://www.apachefriends.org/) (with Apache and MySQL / PHP 8+)
 
-### Step-by-Step Setup
+- Windows 10 or Windows 11
+- XAMPP
+- PHP 8+
+- MySQL or MariaDB
+- Visual Studio Code
+- Web browser
 
-1. **Place the Project in `htdocs`**  
-   Clone or copy the `KaamConnect` project folder to your XAMPP web root:
-   ```text
-   C:\xampp\htdocs\kaamconnect
-   ```
-   *(Or if running directly as the root virtual host, point DocumentRoot to this folder).*
+### Step 1: Clone the Repository
 
-2. **Start Apache and MySQL**  
-   Open the **XAMPP Control Panel** and click **Start** for both **Apache** and **MySQL**.
+Open your terminal and run:
 
-3. **Install the Database**  
-   Choose either of the two easy options:
-   
-   - **Option A (One-Click Web Installer):**  
-     Open your browser and navigate to:  
-     `http://localhost/kaamconnect/install.php`  
-     Click **Install Database & Seed Data**.
-   
-   - **Option B (phpMyAdmin):**  
-     Open `http://localhost/phpmyadmin/`, create database `kaamconnect_db`, and import `database/kaamconnect.sql`.
+```bash
+git clone https://github.com/mkmkushwahaa/KaamConnect.git
+```
 
-4. **Access the Application**  
-   Navigate to:  
-   `http://localhost/kaamconnect/index.php`
+### Step 2: Move the Project
 
----
+Place the project folder inside your XAMPP `htdocs` directory.
 
-## 6. Pre-Seeded Demonstration Accounts
-
-For testing, presentation, and examiner demonstrations, pre-configured accounts are available:
-
-| Role | Email / Login | Phone | Default Password |
-|---|---|---|---|
-| **Super Admin** | `admin@kaamconnect.com` | `9876543210` | `Admin@123` |
-| **Worker (Electrician)** | `ramesh.worker@kaamconnect.com` | `9876500001` | `Password@123` |
-| **Worker (Plumber)** | `aslam.worker@kaamconnect.com` | `9876500002` | `Password@123` |
-| **Customer** | `sunita.customer@kaamconnect.com` | `9876500003` | `Password@123` |
-| **Customer** | `vikram.customer@kaamconnect.com` | `9876500004` | `Password@123` |
-
----
-
-## 7. Directory Structure
+Example:
 
 ```text
-KaamConnect/
-├── index.php                      # Public Marketplace Homepage
-├── login.php                      # Unified Secure Login Page
-├── register.php                   # Dual-Role Registration Page
-├── logout.php                     # Session Termination & Redirection
-├── workers.php                    # Public Worker Directory & Search
-├── jobs.php                       # Public Job Board & Search
-├── about.php                      # About KaamConnect Mission
-├── contact.php                    # Contact Support Form
-├── install.php                    # Automated Database Diagnostic & Installer
-│
-├── config/
-│   └── database.php               # PDO Database Connection & Global Query Helpers
-│
-├── assets/
-│   ├── css/
-│   │   └── style.css              # Custom Stylesheet & Design Tokens
-│   ├── js/
-│   │   └── main.js                # Client-Side Helpers & AJAX Polling
-│   ├── images/                    # Platform Logos & SVGs
-│   └── uploads/                   # User Avatars & Portfolio Photos
-│
-├── includes/
-│   ├── header.php                 # Global HTML5 Header & Flash Alerts
-│   ├── navbar.php                 # Navigation Bar & Dynamic Menus
-│   ├── footer.php                 # Responsive Footer & Modals
-│   ├── auth.php                   # Role-Based Route Guards (RBAC)
-│   ├── functions.php              # Global Security, XSS, CSRF, Translations
-│   └── languages/
-│       ├── en.php                 # English Language Dictionary
-│       └── hi.php                 # Hindi Language Dictionary
-│
-├── worker/
-│   ├── dashboard.php              # Worker Overview & Quick Stats
-│   ├── profile.php                # Worker Profile & Skills Editor
-│   ├── portfolio.php              # Work Photo Showcase & Upload
-│   ├── jobs.php                   # Browse & Filter Available Jobs
-│   ├── job-details.php            # Detailed Job Description & Bid Submission
-│   ├── my-applications.php        # Track Status & Withdraw Bids
-│   ├── messages.php               # Live Chat with Customers
-│   └── notifications.php          # Alert Inbox
-│
-├── customer/
-│   ├── dashboard.php              # Customer Overview & Quick Stats
-│   ├── profile.php                # Customer Profile & Address Editor
-│   ├── post-job.php               # Publish New Job Requirement
-│   ├── manage-jobs.php            # Manage Listings & Inspect Applicants
-│   ├── job-applications.php       # Review Proposals & Hire Worker
-│   ├── workers.php                # Search & Filter Local Workers
-│   ├── worker-profile.php         # Worker Public Portfolio & Rating Details
-│   ├── messages.php               # Live Chat with Workers
-│   ├── review.php                 # Submit Post-Job Star Rating & Feedback
-│   └── notifications.php          # Alert Inbox
-│
-├── admin/
-│   ├── index.php                  # Superadmin Dashboard & KPI Metrics
-│   ├── workers.php                # Worker Verification & Account Actions
-│   ├── customers.php              # Customer Account Directory
-│   ├── jobs.php                   # Platform Job Postings Moderation
-│   ├── categories.php             # Trade Category CRUD
-│   ├── reports.php                # Dispute & Complaint Management
-│   └── analytics.php              # Growth, Completion & Engagement Analytics
-│
-├── api/
-│   ├── messages.php               # Asynchronous AJAX Message Polling & Send
-│   └── notifications.php          # Unread Notification Polling & Read Status
-│
-├── database/
-│   └── kaamconnect.sql            # Full Relational Schema & Seed Data (14 Tables)
-│
-└── docs/
-    ├── architecture.md            # Technical System Architecture & Mermaid Diagrams
-    └── database_er.md             # Complete Entity-Relationship Model & Data Dictionary
+C:\xampp\htdocs\KAAMCONNECT
+```
+
+### Step 3: Start XAMPP
+
+Open the XAMPP Control Panel and start:
+
+- Apache
+- MySQL
+
+### Step 4: Create the Database
+
+1. Open phpMyAdmin.
+2. Create a new database named `kaamconnect_db`.
+3. Import the project's database SQL file if it is available in your local project.
+4. Configure the database connection in your local configuration file.
+
+**Note:** The production database export is intentionally excluded from this public repository. Use a clean development database schema or an authorized project backup.
+
+### Step 5: Configure Database Connection
+
+Configure your local database settings in the appropriate configuration file.
+
+Do not upload database passwords, hosting credentials or email credentials to GitHub.
+
+### Step 6: Run the Application
+
+Open your browser:
+
+```text
+http://localhost:8080/kaamconnect/
 ```
 
 ---
 
-## 8. Version 2.0 Roadmap (8th Semester AI Extension)
+## 7. Project Directory Structure
 
-In accordance with project scope guidelines, Version 1.0 focuses on the rock-solid core transactional marketplace. Version 2.0 will connect an external Python FastAPI AI service:
-- **AI Chat Assistant**: Multilingual voice/text conversational bot guiding unlettered artisans.
-- **Smart Job Matcher**: Automated semantic matching between worker profile vectors and newly posted customer jobs.
-- **AI Profile Builder**: Voice-to-text profile generator that transforms informal spoken Hindi/English into structured resumes.
-- **Natural Language Search**: "Find me a plumber near Sector 15 who can fix a geyser tomorrow."
+```text
+KAAMCONNECT/
+│
+├── admin/
+│   ├── includes/
+│   ├── index.php
+│   ├── notifications.php
+│   ├── workers.php
+│   ├── customers.php
+│   ├── jobs.php
+│   ├── categories.php
+│   └── reports.php
+│
+├── api/
+│   ├── messages.php
+│   └── notifications.php
+│
+├── assets/
+│   ├── css/
+│   ├── js/
+│   ├── images/
+│   └── uploads/
+│
+├── config/
+│   └── database.php
+│
+├── customer/
+│   ├── dashboard.php
+│   ├── profile.php
+│   ├── post-job.php
+│   ├── manage-jobs.php
+│   ├── workers.php
+│   ├── messages.php
+│   └── notifications.php
+│
+├── database/
+│   └── .htaccess
+│
+├── includes/
+│   ├── auth.php
+│   ├── functions.php
+│   ├── mailer.php
+│   ├── navbar.php
+│   ├── header.php
+│   └── footer.php
+│
+├── worker/
+│   ├── dashboard.php
+│   ├── profile.php
+│   ├── jobs.php
+│   ├── my-applications.php
+│   ├── messages.php
+│   └── notifications.php
+│
+├── login.php
+├── register.php
+├── logout.php
+├── index.php
+├── workers.php
+├── jobs.php
+├── about.php
+├── contact.php
+└── README.md
+```
+
+---
+
+## 8. Database
+
+KaamConnect uses **MySQL / MariaDB** as its relational database management system.
+
+The database stores information related to:
+
+- Users and authentication
+- Customer profiles
+- Worker profiles
+- Job categories
+- Job postings
+- Job applications
+- Notifications
+- Messaging
+- Identity verification
+
+PHP communicates with the database using PDO.
+
+---
+
+## 9. Security Considerations
+
+The project includes security-related measures such as:
+
+- Password hashing.
+- Prepared SQL statements.
+- Role-based access control.
+- Session-based authentication.
+- Input validation.
+- Output escaping.
+- Protected configuration files.
+
+**Important:** Never commit production database credentials, Gmail App Passwords, private documents, session data or application logs to a public repository.
+
+---
+
+## 10. Future Scope - Version 2.0
+
+The planned 8th-semester extension will explore AI-based features.
+
+### Planned AI Features
+
+**1. AI Chat Assistant**
+
+A multilingual assistant that helps users navigate the platform and understand its features.
+
+**2. Smart Job Matching**
+
+An intelligent matching system that recommends suitable jobs to workers based on their skills, experience and location.
+
+**3. AI Profile Builder**
+
+A voice-based profile creation assistant that converts spoken information into structured professional profiles.
+
+**4. Natural Language Job Search**
+
+Allow users to search for jobs and workers using everyday language.
+
+### Planned Technology
+
+- Python
+- FastAPI
+- AI and Natural Language Processing
+- Machine Learning
+
+These features are planned for a future version and are not presented as completed functionality.
+
+---
+
+## 11. Project Information
+
+| Detail | Information |
+|---|---|
+| Project Name | KaamConnect |
+| Project Type | Final-Year Major Project |
+| Degree | B.Tech |
+| Branch | Computer Science and Engineering |
+| Backend | PHP |
+| Database | MySQL / MariaDB |
+| Frontend | HTML, CSS, JavaScript |
+| Development Environment | XAMPP and VS Code |
+
+---
+
+## 12. Live Project
+
+**Website:** https://kaamconnect.site.je
+
+**GitHub Repository:** https://github.com/mkmkushwahaa/KaamConnect
+
+---
+
+## 13. Author
+
+**Mukesh Kumar**
+
+B.Tech Computer Science and Engineering
+
+Katihar Engineering College
+
+Bihar Engineering University
+
+---
+
+*KaamConnect aims to make local employment opportunities more accessible by connecting workers and customers through a simple digital platform.*
