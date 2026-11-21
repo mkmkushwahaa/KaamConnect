@@ -11,6 +11,7 @@ $pageTitle = $pageTitle ?? 'Admin Dashboard - KaamConnect';
 $stats = getAdminDashboardStats();
 $adminUnreadNotifs = getUnreadNotificationCount((int)$adminUser['id']);
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>

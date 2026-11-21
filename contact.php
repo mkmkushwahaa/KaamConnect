@@ -188,7 +188,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <div>
                         <span class="text-muted small d-block">Helpline & WhatsApp Support</span>
-                        <strong class="text-dark">+91 98765 43210</strong>
+                        <strong class="text-dark">+91 1231231210</strong>
                     </div>
                 </div>
 

@@ -1,5 +1,5 @@
 # Operating System Files
-/includes/mail_config.local.php
+
 Thumbs.db
 ehthumbs.db
 Desktop.ini
@@ -49,3 +49,17 @@ desktop.ini
 # Temporary test files
 /test_mail.php
 
+# Production database credentials
+/config/database.hosting.php
+
+# Private email configurations
+/includes/mail_config.local.php
+/includes/mail_config.hosting.php
+
+# Database exports and backups
+/database/*.sql
+
+# Application logs
+/logs/
+
+# Local database configuration

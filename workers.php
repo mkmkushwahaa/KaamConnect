@@ -455,7 +455,7 @@ try {
                                         <div>
                                             <?php if (isCustomer()): ?>
                                                 <?php if (isUserVerified()): ?>
-                                                    <a href="<?= url('/customer/book-worker.php?worker_id=' . (int)$worker['id']) ?>" class="btn btn-kc-primary btn-sm">
+                                                    <a href="<?= url('/customer/book-worker.php?worker_id=' . (int)$worker['user_id']) ?>" class="btn btn-kc-primary btn-sm">
                                                         <i class="fas fa-handshake me-1"></i><?= __('contact_worker') ?>
                                                     </a>
                                                 <?php else: ?>

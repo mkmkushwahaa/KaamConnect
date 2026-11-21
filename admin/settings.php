@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 $pageTitle = 'Admin Settings - KaamConnect Admin';
 require_once __DIR__ . '/includes/header.php';
+require_once dirname(__DIR__) . '/includes/mailer.php';
 
 $pdo = getDBConnection();
 $dbVersion = $pdo->query("SELECT VERSION()")->fetchColumn();
@@ -91,7 +92,16 @@ $dbVersion = $pdo->query("SELECT VERSION()")->fetchColumn();
                     <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
                         <span class="text-muted">PHPMailer SMTP Mode</span>
                         <span class="badge bg-secondary-subtle text-secondary fw-bold">
-                            <?= getenv('SMTP_HOST') ? 'Active (Live SMTP)' : 'Development (mail.log Fallback)' ?>
+                            <?php
+                                $smtpActive = false;
+                                if (function_exists('getMailConfig')) {
+                                    $mc = getMailConfig();
+                                    $smtpActive = !empty($mc['host']);
+                                } else {
+                                    $smtpActive = !empty(getenv('SMTP_HOST')) || !empty($_ENV['SMTP_HOST']);
+                                }
+                                echo $smtpActive ? 'Active (Live SMTP)' : 'Development (Fallback)';
+                            ?>
                         </span>
                     </li>
                     <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">

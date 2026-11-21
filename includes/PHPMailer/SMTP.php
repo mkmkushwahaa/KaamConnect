@@ -42,18 +42,29 @@ class SMTP
         restore_error_handler();
 
         if (!is_resource($this->smtp_conn)) {
-            $this->error = ['error' => "Failed to connect to server: $errstr ($errno)"];
+            $this->error = [
+                'error' => "Failed to connect to server {$host}:{$port} - $errstr ($errno)",
+                'errno' => $errno,
+                'errstr' => $errstr
+            ];
             return false;
         }
 
         stream_set_timeout($this->smtp_conn, $timeout, 0);
         $announce = $this->get_lines();
-        return $this->errorHandlerCheck($announce, 220);
+        if (!$this->errorHandlerCheck($announce, 220)) {
+            $this->error = [
+                'error' => 'Invalid greeting from SMTP server: ' . trim($announce)
+            ];
+            return false;
+        }
+        return true;
     }
 
     public function startTLS(): bool
     {
         if (!$this->sendCommand('STARTTLS', 'STARTTLS', 220)) {
+            $this->error = ['error' => 'STARTTLS command rejected: ' . trim($this->last_reply)];
             return false;
         }
 
@@ -62,23 +73,34 @@ class SMTP
         $crypto_ok = stream_socket_enable_crypto($this->smtp_conn, true, $crypto_method);
         restore_error_handler();
 
-        return (bool)$crypto_ok;
+        if (!$crypto_ok) {
+            $this->error = ['error' => 'TLS crypto negotiation failed.'];
+            return false;
+        }
+        return true;
     }
 
     public function authenticate(string $user, string $pass, string $authtype = 'LOGIN'): bool
     {
         if ($authtype === 'PLAIN') {
-            return $this->sendCommand('AUTH PLAIN', 'AUTH PLAIN ' . base64_encode("\0" . $user . "\0" . $pass), 235);
+            $ok = $this->sendCommand('AUTH PLAIN', 'AUTH PLAIN ' . base64_encode("\0" . $user . "\0" . $pass), 235);
+            if (!$ok) {
+                $this->error = ['error' => 'AUTH PLAIN rejected: ' . trim($this->last_reply)];
+            }
+            return $ok;
         }
 
         // Default LOGIN
         if (!$this->sendCommand('AUTH LOGIN', 'AUTH LOGIN', 334)) {
+            $this->error = ['error' => 'AUTH LOGIN initiation rejected: ' . trim($this->last_reply)];
             return false;
         }
         if (!$this->sendCommand('User', base64_encode($user), 334)) {
+            $this->error = ['error' => 'Username rejected: ' . trim($this->last_reply)];
             return false;
         }
         if (!$this->sendCommand('Password', base64_encode($pass), 235)) {
+            $this->error = ['error' => 'Password rejected: ' . trim($this->last_reply)];
             return false;
         }
         return true;
@@ -205,6 +227,11 @@ class SMTP
     public function getError(): array
     {
         return $this->error;
+    }
+
+    public function getLastReply(): string
+    {
+        return (string)$this->last_reply;
     }
 
     public function errorHandler($errno, $errmsg, $errfile = '', $errline = 0): void

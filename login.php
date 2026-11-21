@@ -29,7 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $resetEmail = trim($_POST['reset_email'] ?? '');
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
+        logMailActivity($resetEmail, 'PASSWORD_RESET_SUBMITTED', "Forgot Password request received from IP {$ip}.");
+
         if (empty($resetEmail) || !filter_var($resetEmail, FILTER_VALIDATE_EMAIL)) {
+            logMailActivity($resetEmail, 'VALIDATION_FAILED', 'Invalid email address format submitted.');
             $errors[] = 'Please enter a valid registered email address.';
         } else {
             // Check rate limiting on password reset requests (max 5 requests per 15 minutes)
@@ -41,119 +44,158 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$resetEmail]
                 );
                 if ((int)($recentResets['cnt'] ?? 0) >= 5) {
+                    logMailActivity($resetEmail, 'RATE_LIMITED', 'Too many password reset requests within 15 minutes.');
                     $errors[] = 'Too many password reset requests. Please wait a few minutes before trying again.';
                 }
             } catch (Exception $e) {
                 // Ignore rate limit check error if table issues
+                logMailActivity($resetEmail, 'RATE_LIMIT_CHECK_ERROR', $e->getMessage());
             }
 
             if (empty($errors)) {
-    try {
-
-        // Check user in database
-        $user = dbFetchOne(
-            "SELECT id, full_name, email, role, status
-             FROM users
-             WHERE email = ?
-             LIMIT 1",
-            [$resetEmail]
-        );
-
-        // Continue only if the account exists and is not suspended
-        if ($user && $user['status'] !== 'suspended') {
-
-            // Generate secure random token
-            $plainToken = bin2hex(random_bytes(32));
-            $tokenHash = hash('sha256', $plainToken);
-
-            // Token expires after 15 minutes
-            $expiresAt = date('Y-m-d H:i:s', time() + 15 * 60);
-
-            // Invalidate previous unused reset requests
-            dbExecute(
-                "UPDATE password_resets
-                 SET used_at = NOW()
-                 WHERE user_id = ? AND used_at IS NULL",
-                [(int)$user['id']]
-            );
-
-            // Store new hashed token in database
-            dbExecute(
-                "INSERT INTO password_resets
-                 (user_id, token_hash, expires_at, created_at)
-                 VALUES (?, ?, ?, NOW())",
-                [
-                    (int)$user['id'],
-                    $tokenHash,
-                    $expiresAt
-                ]
-            );
-
-            // Generate password reset URL
-            $resetLink = getAbsoluteUrl(
-                '/reset_password.php?token=' . $plainToken
-            );
-
-            // Send password reset email through Gmail SMTP
-            $mailResult = sendPasswordResetEmail(
-                $user['email'],
-                $user['full_name'],
-                $resetLink
-            );
-
-            // Check whether email was successfully sent
-            if (empty($mailResult['success'])) {
-
-                // Invalidate reset token if email delivery fails
-                dbExecute(
-                    "UPDATE password_resets
-                     SET used_at = NOW()
-                     WHERE token_hash = ? AND used_at IS NULL",
-                    [$tokenHash]
-                );
-
-                // Log failure without exposing the reset token
-                error_log('Password reset email delivery failed.');
-
-            } else {
-
-                // Create in-app notification after successful email delivery
                 try {
-                    createNotification(
-                        (int)$user['id'],
-                        'Password Reset Requested',
-                        'A password reset request was initiated for your KaamConnect account. This reset link expires in 15 minutes.',
-                        url('/login.php'),
-                        'security'
+                    // Check user in database
+                    $user = dbFetchOne(
+                        "SELECT id, full_name, email, role, status
+                         FROM users
+                         WHERE email = ?
+                         LIMIT 1",
+                        [$resetEmail]
                     );
-                } catch (Throwable $notificationError) {
 
-                    // Notification failure should not invalidate a successful email
-                    error_log(
-                        'Password reset notification error: ' .
-                        $notificationError->getMessage()
+                    // Check if user was found
+                    if (!$user) {
+                        logMailActivity(
+                            $resetEmail,
+                            'USER_NOT_FOUND',
+                            'Email lookup returned no results in database users table. Reset email was NOT dispatched because account does not exist.'
+                        );
+                    } elseif ($user['status'] === 'suspended') {
+                        logMailActivity(
+                            $resetEmail,
+                            'USER_SUSPENDED',
+                            "User ID {$user['id']} exists but is suspended. Reset email was NOT dispatched."
+                        );
+                    } else {
+                        // User exists and is active
+                        logMailActivity(
+                            $resetEmail,
+                            'USER_FOUND',
+                            "Active account found (User ID: {$user['id']}). Generating reset token."
+                        );
+
+                        // Generate secure random token
+                        $plainToken = bin2hex(random_bytes(32));
+                        $tokenHash = hash('sha256', $plainToken);
+
+                        // Token expires after 15 minutes
+                        $expiresAt = date('Y-m-d H:i:s', time() + 15 * 60);
+
+                        // Invalidate previous unused reset requests
+                        dbExecute(
+                            "UPDATE password_resets
+                             SET used_at = NOW()
+                             WHERE user_id = ? AND used_at IS NULL",
+                            [(int)$user['id']]
+                        );
+
+                        // Store new hashed token in database
+                        dbExecute(
+                            "INSERT INTO password_resets
+                             (user_id, token_hash, expires_at, created_at)
+                             VALUES (?, ?, ?, NOW())",
+                            [
+                                (int)$user['id'],
+                                $tokenHash,
+                                $expiresAt
+                            ]
+                        );
+
+                        logMailActivity(
+                            $resetEmail,
+                            'TOKEN_STORED',
+                            'New reset token stored in password_resets table. Valid for 15 minutes.'
+                        );
+
+                        // Generate password reset URL
+                        $resetLink = getAbsoluteUrl(
+                            '/reset_password.php?token=' . $plainToken
+                        );
+
+                        logMailActivity(
+                            $resetEmail,
+                            'SMTP_DISPATCH_START',
+                            'Calling sendPasswordResetEmail() via Gmail SMTP...'
+                        );
+
+                        // Send password reset email through Gmail SMTP
+                        $mailResult = sendPasswordResetEmail(
+                            $user['email'],
+                            $user['full_name'],
+                            $resetLink
+                        );
+
+                        // Check whether email was successfully sent
+                        if (empty($mailResult['success'])) {
+                            // Invalidate reset token if email delivery fails
+                            dbExecute(
+                                "UPDATE password_resets
+                                 SET used_at = NOW()
+                                 WHERE token_hash = ? AND used_at IS NULL",
+                                [$tokenHash]
+                            );
+
+                            logMailActivity(
+                                $resetEmail,
+                                'SMTP_DISPATCH_FAILED',
+                                'Email delivery failed. Reason: ' . ($mailResult['message'] ?? 'Unknown SMTP failure.')
+                            );
+                        } else {
+                            logMailActivity(
+                                $resetEmail,
+                                'SMTP_DISPATCH_SUCCESS',
+                                'Password reset email successfully accepted by SMTP server for delivery.'
+                            );
+
+                            // Create in-app notification after successful email delivery
+                            try {
+                                createNotification(
+                                    (int)$user['id'],
+                                    'Password Reset Requested',
+                                    'A password reset request was initiated for your KaamConnect account. This reset link expires in 15 minutes.',
+                                    url('/login.php'),
+                                    'security'
+                                );
+                            } catch (Throwable $notificationError) {
+                                // Notification failure should not invalidate a successful email
+                                logMailActivity(
+                                    $resetEmail,
+                                    'NOTIFICATION_ERROR',
+                                    'In-app notification error: ' . $notificationError->getMessage()
+                                );
+                            }
+                        }
+                    }
+
+                    // Generic response to prevent email/account enumeration
+                    setFlash(
+                        'success',
+                        'If an account is associated with that email address, password reset instructions may be sent. Please check your inbox and spam folder.'
                     );
+
+                    redirect('/login.php');
+
+                } catch (Throwable $e) {
+                    logMailActivity(
+                        $resetEmail,
+                        'FATAL_EXCEPTION',
+                        'Password Reset Exception: ' . $e->getMessage()
+                    );
+
+                    // Display a safe message to the user
+                    $errors[] = 'Unable to process your request right now. Please try again later.';
                 }
             }
-        }
-
-        // Generic response to prevent email/account enumeration
-        setFlash(
-            'success',
-            'If an account is associated with that email address, password reset instructions may be sent. Please check your inbox and spam folder.'
-        );
-
-        redirect('/login.php');
-
-    } catch (Throwable $e) {
-
-        // Log technical error privately
-        error_log('Password Reset Error: ' . $e->getMessage());
-
-        // Display a safe message to the user
-        $errors[] = 'Unable to process your request right now. Please try again later.';
-    }
-}
         }
     } else {
         // --- 2. STANDARD LOGIN HANDLER ---
@@ -350,7 +392,7 @@ require_once __DIR__ . '/includes/header.php';
                 </form>
             </div>
 
-            <!-- Pre-Seeded Demonstration Accounts Quick-Fill Box for Examiners -->
+            <!-- Pre-Seeded Demonstration Accounts Quick-Fill Box for Examiners
             <div class="card mt-4 border border-info-subtle bg-light shadow-sm">
                 <div class="card-body p-3">
                     <div class="d-flex align-items-center justify-content-between mb-2">
@@ -376,13 +418,13 @@ require_once __DIR__ . '/includes/header.php';
                                 data-id="9876500003" data-pass="Password@123">
                             <i class="fas fa-user me-1 text-success"></i>Customer (Sunita)
                         </button>
-                        <button type="button" class="btn btn-outline-secondary btn-sm quick-fill" 
+                        <button type="button" class="btn btn-outline-secondary btn-sm quick-fill"   
                                 data-id="9876500004" data-pass="Password@123">
                             <i class="fas fa-user me-1 text-success"></i>Customer (Vikram)
                         </button>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
 </div>

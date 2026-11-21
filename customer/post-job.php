@@ -13,6 +13,13 @@ requireVerifiedCustomer();
 
 $user = currentUser();
 $userId = (int)$user['id'];
+$customerProfile = dbFetchOne(
+    "SELECT id FROM customer_profiles WHERE user_id = ? LIMIT 1",
+    [$userId]
+);
+$customerProfileId = (int)($customerProfile['id'] ?? 0);
+
+$customerProfileId = (int)($customerProfile['id'] ?? 0);
 $customerProfile = getCustomerProfile($userId);
 
 $pdo = getDBConnection();
@@ -68,15 +75,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
+            
             dbExecute(
                 "INSERT INTO jobs (customer_id, category_id, title, description, required_skills, city, locality, district, state, latitude, longitude, budget, wage_type, preferred_date, status, created_at, updated_at)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', NOW(), NOW())",
-                [$userId, $categoryId, $title, $description, $requiredSkills, $city, $locality, $district, $state, $lat, $lon, $budget, $wageType, $preferredDate]
+                [$customerProfileId, $categoryId, $title, $description, $requiredSkills, $city, $locality, $district, $state, $lat, $lon, $budget, $wageType, $preferredDate]
             );
 
             setFlash('success', 'Your job requirement has been published successfully! Verified workers in ' . e($city) . ' will be notified.');
             redirect('/jobs.php');
-        }
+        }   
     }
 }
 

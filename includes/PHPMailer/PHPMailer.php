@@ -111,36 +111,46 @@ class PHPMailer
         }
 
         if (!$this->smtp->connect($host, $port, $this->Timeout, $this->SMTPOptions)) {
-            throw new Exception('Could not connect to SMTP host: ' . $this->Host . ':' . $this->Port);
+            $err = $this->smtp->getError();
+            $detail = !empty($err['error']) ? ': ' . $err['error'] : '';
+            throw new Exception('Could not connect to SMTP host: ' . $this->Host . ':' . $this->Port . $detail);
         }
 
         $helo = !empty($this->Helo) ? $this->Helo : (isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : 'localhost');
         if (!$this->smtp->hello($helo)) {
-            throw new Exception('SMTP error: HELO/EHLO failed');
+            $last = trim($this->smtp->getLastReply());
+            throw new Exception('SMTP error: HELO/EHLO failed' . ($last ? " ($last)" : ''));
         }
 
         if ($this->SMTPSecure === self::ENCRYPTION_STARTTLS) {
             if (!$this->smtp->startTLS()) {
-                throw new Exception('SMTP error: STARTTLS failed');
+                $err = $this->smtp->getError();
+                $detail = !empty($err['error']) ? ': ' . $err['error'] : '';
+                throw new Exception('SMTP error: STARTTLS failed' . $detail);
             }
             if (!$this->smtp->hello($helo)) {
-                throw new Exception('SMTP error: Post-TLS HELO failed');
+                $last = trim($this->smtp->getLastReply());
+                throw new Exception('SMTP error: Post-TLS HELO failed' . ($last ? " ($last)" : ''));
             }
         }
 
         if ($this->SMTPAuth) {
             if (!$this->smtp->authenticate($this->Username, $this->Password, $this->AuthType ?: 'LOGIN')) {
-                throw new Exception('SMTP error: Authentication failed');
+                $err = $this->smtp->getError();
+                $detail = !empty($err['error']) ? ': ' . $err['error'] : '';
+                throw new Exception('SMTP error: Authentication failed' . $detail);
             }
         }
 
         if (!$this->smtp->mail($this->From)) {
-            throw new Exception('SMTP error: MAIL FROM rejected');
+            $last = trim($this->smtp->getLastReply());
+            throw new Exception('SMTP error: MAIL FROM rejected' . ($last ? " ($last)" : ''));
         }
 
         foreach ($this->to as $recipient) {
             if (!$this->smtp->recipient($recipient[0])) {
-                throw new Exception('SMTP error: RCPT TO rejected for ' . $recipient[0]);
+                $last = trim($this->smtp->getLastReply());
+                throw new Exception('SMTP error: RCPT TO rejected for ' . $recipient[0] . ($last ? " ($last)" : ''));
             }
         }
 
@@ -148,7 +158,8 @@ class PHPMailer
         $body = $this->Body;
 
         if (!$this->smtp->data($header . "\r\n\r\n" . $body)) {
-            throw new Exception('SMTP error: DATA send failed');
+            $last = trim($this->smtp->getLastReply());
+            throw new Exception('SMTP error: DATA send failed' . ($last ? " ($last)" : ''));
         }
 
         $this->smtp->quit();

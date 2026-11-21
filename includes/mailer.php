@@ -2,14 +2,11 @@
 
 declare(strict_types=1);
 
-
-require_once __DIR__ . '/mail_config.local.php';
 /**
  * KaamConnect - Mailer Service using PHPMailer
  * Technology: PHP 8+, PHPMailer SMTP Engine
- * Compatible with RFC 5321 & secure environment variable credentials
+ * Compatible with RFC 5321 & secure hosting environment configurations
  */
-
 
 require_once __DIR__ . '/PHPMailer/Exception.php';
 require_once __DIR__ . '/PHPMailer/SMTP.php';
@@ -17,6 +14,202 @@ require_once __DIR__ . '/PHPMailer/PHPMailer.php';
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
+
+/**
+ * Retrieve unified mail configuration from file, $_ENV, $_SERVER, or getenv()
+ * Ensures full compatibility on hosting providers (e.g. InfinityFree) where putenv() is disabled.
+ */
+function getMailConfig(): array {
+    static $config = null;
+    if ($config !== null) {
+        return $config;
+    }
+
+    $httpHost = strtolower(explode(':', $_SERVER['HTTP_HOST'] ?? '')[0]);
+    $isProduction = in_array($httpHost, [
+        'kaamconnect.site.je',
+        'www.kaamconnect.site.je'
+    ], true);
+
+    $mailConfigFile = __DIR__ . ($isProduction ? '/mail_config.hosting.php' : '/mail_config.local.php');
+    $loaded = [];
+    if (is_file($mailConfigFile)) {
+        $fileResult = require $mailConfigFile;
+        if (is_array($fileResult)) {
+            $loaded = $fileResult;
+        }
+    }
+
+    $getVal = function(string $key, $default = '') use ($loaded) {
+        if (!empty($loaded[$key])) {
+            return $loaded[$key];
+        }
+        $envKey = 'SMTP_' . strtoupper($key);
+        if (!empty($_ENV[$envKey])) {
+            return $_ENV[$envKey];
+        }
+        if (!empty($_SERVER[$envKey])) {
+            return $_SERVER[$envKey];
+        }
+        $fromEnv = getenv($envKey);
+        if ($fromEnv !== false && $fromEnv !== '') {
+            return $fromEnv;
+        }
+        return $default;
+    };
+
+    $config = [
+        'host'       => (string)$getVal('host', ''),
+        'port'       => (int)$getVal('port', 587),
+        'secure'     => strtolower((string)$getVal('secure', 'tls')),
+        'user'       => (string)$getVal('user', ''),
+        'pass'       => (string)$getVal('pass', ''),
+        'from_email' => (string)$getVal('from_email', 'noreply@kaamconnect.site.je'),
+        'from_name'  => (string)$getVal('from_name', 'KaamConnect Security Team'),
+    ];
+
+    return $config;
+}
+
+/**
+ * Helper to mask sensitive email addresses in logs (e.g. mk0592497@gmail.com -> mk***97@gmail.com)
+ */
+function maskEmail(string $email): string {
+    $parts = explode('@', $email, 2);
+    if (count($parts) !== 2) {
+        return '***';
+    }
+    $name = $parts[0];
+    $domain = $parts[1];
+    $len = strlen($name);
+    if ($len <= 2) {
+        $maskedName = substr($name, 0, 1) . '*';
+    } elseif ($len <= 4) {
+        $maskedName = substr($name, 0, 1) . '**' . substr($name, -1);
+    } else {
+        $maskedName = substr($name, 0, 2) . str_repeat('*', min(4, $len - 4)) . substr($name, -2);
+    }
+    return $maskedName . '@' . $domain;
+}
+
+/**
+ * Categorize raw SMTP errors for safe, actionable diagnostics
+ */
+function categorizeMailError(string $msg): string {
+    $lower = strtolower($msg);
+    if (
+        str_contains($lower, 'timed out') ||
+        str_contains($lower, 'timeout') ||
+        str_contains($lower, '110') ||
+        str_contains($lower, '101') ||
+        str_contains($lower, '111') ||
+        str_contains($lower, 'could not connect to smtp host')
+    ) {
+        return 'CONNECTION_OR_HOSTING_PORT_BLOCKED';
+    }
+    if (
+        str_contains($lower, 'authentication') ||
+        str_contains($lower, '535') ||
+        str_contains($lower, 'password rejected') ||
+        str_contains($lower, 'username rejected')
+    ) {
+        return 'AUTHENTICATION_FAILURE';
+    }
+    if (
+        str_contains($lower, 'starttls') ||
+        str_contains($lower, 'crypto') ||
+        str_contains($lower, 'ssl') ||
+        str_contains($lower, 'tls')
+    ) {
+        return 'TLS_NEGOTIATION_ERROR';
+    }
+    if (
+        str_contains($lower, 'configuration missing') ||
+        str_contains($lower, 'smtp host is not defined')
+    ) {
+        return 'CONFIGURATION_MISSING';
+    }
+    return 'SMTP_GENERAL_ERROR';
+}
+
+/**
+ * Low-level safe file log writer
+ * Designed for resilience on shared/NFS hosting environments (e.g. InfinityFree)
+ * Avoids LOCK_EX which fails on network filesystems, and includes root fallback.
+ */
+function safeWriteLog(string $entry): bool {
+    $baseDir = dirname(__DIR__); // Project root (/htdocs)
+    $candidatePaths = [
+        $baseDir . '/logs/mail_error.log',
+        $baseDir . '/logs/mail_debug.log',
+        $baseDir . '/mail_debug.log'
+    ];
+
+    $success = false;
+
+    foreach ($candidatePaths as $filePath) {
+        $dir = dirname($filePath);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0777, true);
+        }
+
+        // Try standard file_put_contents without LOCK_EX (NFS / shared hosting safe)
+        $written = @file_put_contents($filePath, $entry, FILE_APPEND);
+        if ($written !== false && $written > 0) {
+            $success = true;
+            break;
+        }
+
+        // Fallback: try fopen / fwrite
+        $fp = @fopen($filePath, 'ab');
+        if ($fp) {
+            @fwrite($fp, $entry);
+            @fclose($fp);
+            $success = true;
+            break;
+        }
+    }
+
+    // Always mirror to standard PHP system error log
+    error_log(trim($entry));
+    return $success;
+}
+
+/**
+ * Log all mail and password reset lifecycle events safely
+ * Masks emails and redacts passwords to keep logs private and clean.
+ */
+function logMailActivity(string $recipientEmail, string $action, string $details = ''): void {
+    $cfg = getMailConfig();
+    if (!empty($cfg['pass'])) {
+        $details = str_replace($cfg['pass'], '[REDACTED_PASSWORD]', $details);
+    }
+
+    $maskedEmail = maskEmail($recipientEmail);
+    $httpHost = $_SERVER['HTTP_HOST'] ?? 'cli';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+
+    $entry = sprintf(
+        "[%s] [%s] Host: %s | IP: %s | Recipient: %s | Details: %s\n",
+        date('Y-m-d H:i:s'),
+        strtoupper($action),
+        $httpHost,
+        $ip,
+        $maskedEmail,
+        trim($details)
+    );
+
+    safeWriteLog($entry);
+}
+
+/**
+ * Record detailed SMTP failures in private server-side log
+ * Never exposes credentials, passwords, tokens, or links
+ */
+function logMailError(string $recipientEmail, string $rawError, array $context = []): void {
+    $category = categorizeMailError($rawError);
+    logMailActivity($recipientEmail, $category, $rawError);
+}
 
 /**
  * Configure and return a new PHPMailer instance based on environment variables
@@ -27,46 +220,33 @@ function getMailerInstance(): PHPMailer {
     // Character set and encoding
     $mail->CharSet = 'UTF-8';
     $mail->Encoding = 'base64';
+    $mail->Timeout = 15; // Safe timeout to prevent worker hangs on blocked ports
 
-    // Retrieve environment variables with safe defaults
-    $smtpHost = getenv('SMTP_HOST') ?: '';
-    $smtpPort = (int)(getenv('SMTP_PORT') ?: 587);
-    $smtpUser = getenv('SMTP_USER') ?: '';
-    $smtpPass = getenv('SMTP_PASS') ?: '';
-    $smtpSecure = strtolower((string)(getenv('SMTP_SECURE') ?: 'tls'));
-    $fromEmail = getenv('SMTP_FROM_EMAIL') ?: 'noreply@kaamconnect.com';
-    $fromName = getenv('SMTP_FROM_NAME') ?: 'KaamConnect Security Team';
+    $cfg = getMailConfig();
 
-    if (!empty($smtpHost)) {
+    if (!empty($cfg['host'])) {
         $mail->isSMTP();
-        $mail->Host = $smtpHost;
-        $mail->Port = $smtpPort;
+        $mail->Host = $cfg['host'];
+        $mail->Port = $cfg['port'];
 
-        if (!empty($smtpUser)) {
+        if (!empty($cfg['user'])) {
             $mail->SMTPAuth = true;
-            $mail->Username = $smtpUser;
-            $mail->Password = $smtpPass;
+            $mail->Username = $cfg['user'];
+            $mail->Password = $cfg['pass'];
         }
 
-        if ($smtpSecure === 'ssl') {
+        if ($cfg['secure'] === 'ssl') {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
-        } elseif ($smtpSecure === 'tls') {
+        } elseif ($cfg['secure'] === 'tls') {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         }
-
-        $mail->SMTPOptions = [
-            'ssl' => [
-                'verify_peer'       => false,
-                'verify_peer_name'  => false,
-                'allow_self_signed' => true
-            ]
-        ];
+        // Strict SSL peer verification is maintained for production security
     } else {
         // Fallback to PHP mail() if SMTP_HOST is not set
         $mail->Mailer = 'mail';
     }
 
-    $mail->setFrom($fromEmail, $fromName);
+    $mail->setFrom($cfg['from_email'], $cfg['from_name']);
     return $mail;
 }
 
@@ -76,11 +256,21 @@ function getMailerInstance(): PHPMailer {
  * @param string $recipientEmail
  * @param string $recipientName
  * @param string $resetLink
- * @return array ['success' => bool, 'message' => string, 'simulated' => bool, 'reset_link' => string]
+ * @return array ['success' => bool, 'message' => string, 'simulated' => bool]
  */
 function sendPasswordResetEmail(string $recipientEmail, string $recipientName, string $resetLink): array {
     $subject = 'Reset Your KaamConnect Password';
     $appName = 'KaamConnect';
+
+    $cfg = getMailConfig();
+    if (empty($cfg['host'])) {
+        logMailError($recipientEmail, 'SMTP host is not defined in configuration.', ['stage' => 'config']);
+        return [
+            'success' => false,
+            'message' => 'Email service is not configured. Please try again later.',
+            'simulated' => false
+        ];
+    }
 
     // Construct responsive HTML body with blue-and-white theme
     $htmlBody = <<<HTML
@@ -139,55 +329,35 @@ HTML;
                "If you did not request this, please disregard this message.\n\n" .
                "-- KaamConnect Security Team";
 
-    // Attempt delivery via PHPMailer
-    $mail = getMailerInstance();
-    $mail->addAddress($recipientEmail, $recipientName);
-    $mail->Subject = $subject;
-    $mail->isHTML(true);
-    $mail->Body = $htmlBody;
-    $mail->AltBody = $altBody;
+    try {
+        $mail = getMailerInstance();
+        $mail->addAddress($recipientEmail, $recipientName);
+        $mail->Subject = $subject;
+        $mail->isHTML(true);
+        $mail->Body = $htmlBody;
+        $mail->AltBody = $altBody;
 
-    // Check if live SMTP is configured
-    $hasSmtpConfig = !empty(getenv('SMTP_HOST'));
-
-    $logDir = dirname(__DIR__) . '/logs';
-    if (!is_dir($logDir)) {
-        @mkdir($logDir, 0777, true);
-    }
-    $logEntry = sprintf(
-        "[%s] PASSWORD RESET TO: %s (%s) | LINK: %s\n",
-        date('Y-m-d H:i:s'),
-        $recipientEmail,
-        $recipientName,
-        $resetLink
-    );
-    @file_put_contents($logDir . '/mail.log', $logEntry, FILE_APPEND);
-
-    if ($hasSmtpConfig) {
-        try {
-            $sent = $mail->send();
+        $sent = $mail->send();
+        if ($sent) {
             return [
-                'success' => $sent,
-                'message' => $sent ? 'Email delivered via SMTP.' :  'Unable to send email.',
+                'success' => true,
+                'message' => 'Email delivered via SMTP.',
                 'simulated' => false,
             ];
-        } catch (Exception $e) {
-            error_log('SMTP Send Error: ' . $e->getMessage());
-            
-            return [
-                'success' => false,
-                'message' => 'Unable to send password reset email. Please try again later.',
-                'simulated' => false
-            ];
         }
-    } else {
-        error_log('SMTP configuration missing.');
 
+        logMailError($recipientEmail, 'PHPMailer send returned false without exception.');
         return [
-           'success' => false,
-           'message' => 'Email service is not configured. Please try again later.',
-           'simulated' => false
-    ];
+            'success' => false,
+            'message' => 'Unable to send password reset email. Please try again later.',
+            'simulated' => false
+        ];
+    } catch (Exception $e) {
+        logMailError($recipientEmail, $e->getMessage(), ['stage' => 'smtp_send']);
+        return [
+            'success' => false,
+            'message' => 'Unable to send password reset email. Please try again later.',
+            'simulated' => false
+        ];
+    }
 }
-}
-
